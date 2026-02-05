@@ -1,26 +1,58 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
 
-export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		const url = new URL(request.url);
-		switch (url.pathname) {
-			case '/message':
-				return new Response('Hello, World!');
-			case '/random':
-				return new Response(crypto.randomUUID());
-			default:
-				return new Response('Not Found', { status: 404 });
-		}
-	},
-} satisfies ExportedHandler<Env>;
+
+
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+
+
+type Bindings = {
+  DB: D1Database;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+app.use('/api/*', cors());
+
+app.get('/api/tasks', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare("SELECT * FROM tasks").all();
+    return c.json(results);
+  } catch (e) {
+    return c.json({ error: "Баазаас дата авахад алдаа гарлаа" }, 500);
+  }
+});
+
+app.post('/api/tasks', async (c) => {
+  const { text } = await c.req.json<{ text: string }>();
+  
+  if (!text) {
+    return c.json({ error: "Empty text"}, 400);
+  }
+
+  await c.env.DB.prepare("INSERT INTO tasks (text, completed) VALUES (?, 0)")
+    .bind(text)
+    .run();
+    
+  return c.json({ message: "Success" }, 200);
+});
+
+
+app.put('/api/tasks/:id', async (c) => {
+  const id = c.req.param('id');
+  const { completed } = await c.req.json<{ completed: boolean }>();
+  
+  await c.env.DB.prepare("UPDATE tasks SET completed = ? WHERE id = ?")
+    .bind(completed ? 1 : 0, id)
+    .run();
+    
+  return c.json({ message: "Updated" });
+});
+
+
+app.delete('/api/tasks/:id', async (c) => {
+  const id = c.req.param('id');
+  await c.env.DB.prepare("DELETE FROM tasks WHERE id = ?").bind(id).run();
+  return c.json({ message: "Deleted" });
+});
+
+export default app;
