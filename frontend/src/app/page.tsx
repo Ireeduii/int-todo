@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 type Task = {
   id: number;
   text: string;
-  completed: boolean;
+  completed: boolean | number;
 };
 
 export default function Home() {
@@ -17,26 +17,105 @@ export default function Home() {
 
 
   // const API_URL = "http://localhost:8787/api/tasks";
- const API_URL = "https://api.todo-cloud.workers.dev/api/tasks";
-
-
-  const fetchTasks = async () => {
-    try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error("get error");
-      const data = await res.json();
-      setTasks(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+//  const API_URL = "https://api.todo-cloud.workers.dev/api/tasks";
+const API_URL = "https://api.todo-cloud.workers.dev/graphql";
+             
+  // const fetchTasks = async () => {
+  //   try {
+  //     const res = await fetch(API_URL);
+  //     if (!res.ok) throw new Error("get error");
+  //     const data = await res.json();
+  //     setTasks(data);
+  //   } catch (err) {
+  //     console.error(err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
 
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // const addTask = async () => {
+  //   if (!input.trim()) return;
+
+  //   try {
+  //     const response = await fetch(API_URL, {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ text: input }),
+  //     });
+
+  //     if (response.ok) {
+  //       setInput("");
+  //       fetchTasks(); 
+  //     }
+  //   } catch (err) {
+  //     console.error("add error", err);
+  //   }
+  // };
+
+
+  // const toggleTask = async (id: number, currentStatus: boolean) => {
+  //   try {
+  //     const response = await fetch(`${API_URL}/${id}`, {
+  //       method: "PUT",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ completed: !currentStatus }),
+  //     });
+
+  //     if (response.ok) {
+  //       fetchTasks();
+  //     }
+  //   } catch (err) {
+  //     console.error("update error", err);
+  //   }
+  // };
+
+
+  // const deleteTask = async (id: number) => {
+  //   try {
+  //     const response = await fetch(`${API_URL}/${id}`, {
+  //       method: "DELETE",
+  //     });
+
+  //     if (response.ok) {
+  //       fetchTasks();
+  //     }
+  //   } catch (err) {
+  //     console.error("delete error", err);
+  //   }
+  // };
+
+
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `
+          query {
+           tasks {
+            id
+            text
+            completed
+           }
+          }
+       `
+        }),
+      });
+      const result = await res.json();
+    
+      setTasks(result.data?.tasks || []);
+    } catch (error) {
+      console.error("fetch error", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addTask = async () => {
     if (!input.trim()) return;
@@ -45,49 +124,33 @@ export default function Home() {
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input }),
+        body: JSON.stringify({
+          query: `
+            mutation {
+             addTask(text: "${input}") {
+               id
+               text
+               completed
+             }
+            }
+          `
+        }),
       });
-
       if (response.ok) {
         setInput("");
-        fetchTasks(); 
-      }
-    } catch (err) {
-      console.error("add error", err);
-    }
-  };
-
-
-  const toggleTask = async (id: number, currentStatus: boolean) => {
-    try {
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: !currentStatus }),
-      });
-
-      if (response.ok) {
         fetchTasks();
       }
-    } catch (err) {
-      console.error("update error", err);
+    } catch (error) {
+      console.error("add error", error);
     }
   };
-
+  const toggleTask = async (id: number) => {
+    console.log("update-graphql")
+  }
 
   const deleteTask = async (id: number) => {
-    try {
-      const response = await fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        fetchTasks();
-      }
-    } catch (err) {
-      console.error("delete error", err);
-    }
-  };
+    console.log("delete-graphql")
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -123,12 +186,12 @@ export default function Home() {
                 className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all"
               >
                 <label className="flex items-center gap-3 cursor-pointer flex-1">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(task.completed)} 
-                    onChange={() => toggleTask(task.id, Boolean(task.completed))}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
+                 <input
+  type="checkbox"
+  checked={task.completed === true || task.completed === 1} 
+  onChange={() => toggleTask(task.id)}
+  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+/>
                   <span
                     className={`text-sm ${
                       task.completed

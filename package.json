@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@hono/graphql-server": "^0.7.0",
+    "graphql": "^16.12.0"
+  }
+}
