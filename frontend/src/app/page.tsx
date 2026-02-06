@@ -8,12 +8,14 @@ type Task = {
   id: number;
   text: string;
   completed: boolean | number;
+  uri: string
 };
 
 export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
+  const [toggle, setToggle] = useState(Boolean)
 
 
   // const API_URL = "http://localhost:8787/api/tasks";
@@ -143,14 +145,63 @@ const API_URL = "https://api.todo-cloud.workers.dev/graphql";
     } catch (error) {
       console.error("add error", error);
     }
-  };
-  const toggleTask = async (id: number) => {
-    console.log("update-graphql")
   }
 
+     const toggleTask = async (id: number) => {
+      try {
+        const response = await fetch (API_URL, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            query: `
+            mutation {
+            toggleTask(id: ${id}) {
+             id
+             completed
+              }
+           }
+           `
+          }),
+        });
+
+        const result = await response.json()
+        if (response.ok && ! result.error) {
+      fetchTasks()
+        }else {
+          console.error("Graphql errors", result.errors)
+        }
+     } catch (error) {
+      console.error("fetch error", error)
+     }
+    }
+
   const deleteTask = async (id: number) => {
-    console.log("delete-graphql")
+    try {
+      const response = await fetch (API_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          query: `
+          mutation {
+          deleteTask(id: ${id}) {
+         
+          }}`
+        }),
+      });
+
+      const result = await response.json()
+      if (response.ok && ! result.errors) {
+        fetchTasks()
+      } else {
+        console.error ("graphql errors", result.errors)
+      }
+    } catch (error) {
+      console.error("fetch error", error)
+    }
+
   }
+     
+ 
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -187,12 +238,12 @@ const API_URL = "https://api.todo-cloud.workers.dev/graphql";
               >
                 <label className="flex items-center gap-3 cursor-pointer flex-1">
                  <input
-  type="checkbox"
-  checked={task.completed === true || task.completed === 1} 
-  onChange={() => toggleTask(task.id)}
-  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-/>
-                  <span
+                   type="checkbox"
+                  checked={task.completed === true || task.completed === 1} 
+                  onChange={() => toggleTask(task.id)}
+                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                   <span
                     className={`text-sm ${
                       task.completed
                         ? "line-through text-gray-400"
@@ -200,7 +251,8 @@ const API_URL = "https://api.todo-cloud.workers.dev/graphql";
                     }`}
                   >
                     {task.text}
-                  </span>
+                  </span> 
+                  
                 </label>
 
                 <button
@@ -216,4 +268,4 @@ const API_URL = "https://api.todo-cloud.workers.dev/graphql";
       </div>
     </main>
   );
-}
+     }

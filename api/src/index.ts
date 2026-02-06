@@ -138,6 +138,7 @@ const typeDefs = `
   type Mutation {
     addTask(text: String!): Task
     deleteTask(id: Int!): String
+	toggleTask(id: Int!) : Task
   }
 `
 
@@ -160,6 +161,13 @@ const resolvers = {
       await c.env.DB.prepare("DELETE FROM tasks WHERE id = ?").bind(id).run();
       return "Deleted successfully";
     },
+	toggleTask: async(_: any, { id }: {id: number}, c: any) => {
+		const result = await c.env.DB.prepare(
+			"UPDATE tasks SET completed = 1 - completed WHERE id = ? RETURNING * "
+		).bind(id).first()
+		
+	}
+	
   },
 }
 
